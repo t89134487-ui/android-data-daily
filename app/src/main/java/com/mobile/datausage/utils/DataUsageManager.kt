@@ -12,7 +12,6 @@ object DataUsageManager {
 
     fun getMobileDataUsage(context: Context, startTime: Long, endTime: Long): Long {
         val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
-        val telephonyManager = context.getSystemService(Context.TELEPHONY_MANAGER_SERVICE) as TelephonyManager
 
         return try {
             val bucket = networkStatsManager.querySummaryForDevice(

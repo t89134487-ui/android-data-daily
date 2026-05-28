@@ -1,6 +1,8 @@
 package com.mobile.datausage.widget
 
 import android.content.Context
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
@@ -21,7 +23,7 @@ import java.util.Calendar
 
 class DataUsageWidget : GlanceAppWidget() {
 
-    override suspend fun provideContent(context: Context, id: GlanceId) {
+    override suspend fun provideGlance(context: Context, id: GlanceId) {
         val calendar = Calendar.getInstance()
         val now = calendar.timeInMillis
         calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -34,26 +36,31 @@ class DataUsageWidget : GlanceAppWidget() {
         val formattedUsage = DataUsageManager.formatDataUsage(usageBytes)
 
         provideContent {
-            Column(
-                modifier = GlanceModifier
-                    .fillMaxSize()
-                    .background(androidx.glance.R.color.glance_color_widget_background)
-                    .padding(8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalAlignment = Alignment.Vertical.CenterVertically
-            ) {
-                Text(
-                    text = "Mobile Data",
-                    style = TextStyle(fontSize = 12.sp)
+            WidgetContent(formattedUsage)
+        }
+    }
+
+    @Composable
+    private fun WidgetContent(formattedUsage: String) {
+        Column(
+            modifier = GlanceModifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalAlignment = Alignment.Vertical.CenterVertically
+        ) {
+            Text(
+                text = "Mobile Data",
+                style = TextStyle(fontSize = 12.sp)
+            )
+            Text(
+                text = formattedUsage,
+                style = TextStyle(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
                 )
-                Text(
-                    text = formattedUsage,
-                    style = TextStyle(
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                )
-            }
+            )
         }
     }
 }
