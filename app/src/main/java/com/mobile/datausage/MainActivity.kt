@@ -22,10 +22,11 @@ import androidx.compose.ui.unit.sp
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.mobile.datausage.data.AppDatabase
 import com.mobile.datausage.data.UsageRecord
 import com.mobile.datausage.utils.DataUsageManager
 import com.mobile.datausage.worker.DataUsageWorker
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -63,21 +64,20 @@ class MainActivity : ComponentActivity() {
 fun DataUsageScreen() {
     val context = LocalContext.current
     var hasPermission by remember { mutableStateOf(checkUsageStatsPermission(context)) }
-    val usageDao = remember { AppDatabase.getDatabase(context).usageDao() }
-    val usageHistory by usageDao.getLast30DaysUsage().collectAsState(initial = emptyList())
-
+    var usageHistory by remember { mutableStateOf(emptyList<UsageRecord>()) }
     var todayUsage by remember { mutableLongStateOf(0L) }
+    var isLoading by remember { mutableStateOf(true) }
 
-    LaunchedEffect(usageHistory) {
-        val calendar = Calendar.getInstance()
-        calendar.set(Calendar.HOUR_OF_DAY, 0)
-        calendar.set(Calendar.MINUTE, 0)
-        calendar.set(Calendar.SECOND, 0)
-        calendar.set(Calendar.MILLISECOND, 0)
-        val todayMidnight = calendar.timeInMillis
-
-        // Fetch fresh today usage on a background thread
-        todayUsage = DataUsageManager.getMobileDataUsage(context, todayMidnight, System.currentTimeMillis())
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) {
+            isLoading = true
+            withContext(Dispatchers.IO) {
+                val history = DataUsageManager.getHistory(context, 30)
+                todayUsage = history.firstOrNull()?.mobileDataBytes ?: 0L
+                usageHistory = history
+            }
+            isLoading = false
+        }
     }
 
     Column(
@@ -97,6 +97,8 @@ fun DataUsageScreen() {
             PermissionWarning {
                 context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
             }
+        } else if (isLoading) {
+            CircularProgressIndicator()
         } else {
             UsageCard("Today", DataUsageManager.formatDataUsage(todayUsage))
 
@@ -119,7 +121,6 @@ fun DataUsageScreen() {
 
     // Refresh permission status when returning to app
     LaunchedEffect(Unit) {
-        // Simple polling for simplicity in this example
         while(true) {
             hasPermission = checkUsageStatsPermission(context)
             kotlinx.coroutines.delay(2000)
