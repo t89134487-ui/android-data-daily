@@ -1,5 +1,6 @@
 To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.8/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
 Daemon will be stopped at the end of the build
+> Task :app:clean
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
@@ -10,8 +11,8 @@ Daemon will be stopped at the end of the build
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
-> Task :app:mergeDebugResources
 > Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
@@ -22,24 +23,24 @@ Daemon will be stopped at the end of the build
 > Task :app:mergeDebugAssets
 > Task :app:compressDebugAssets
 > Task :app:desugarDebugFileDependencies
+> Task :app:mergeDebugStartupProfile UP-TO-DATE
 > Task :app:processDebugManifestForPackage
 > Task :app:checkDebugDuplicateClasses
-> Task :app:mergeDebugStartupProfile
-> Task :app:processDebugResources
-> Task :app:mergeExtDexDebug
-> Task :app:mergeLibDexDebug
 > Task :app:mergeDebugJniLibFolders
+> Task :app:mergeLibDexDebug
 > Task :app:mergeDebugNativeLibs NO-SOURCE
 > Task :app:stripDebugDebugSymbols NO-SOURCE
 > Task :app:validateSigningDebug
 > Task :app:writeDebugAppMetadata
 > Task :app:writeDebugSigningConfigVersions
+> Task :app:processDebugResources
+> Task :app:mergeExtDexDebug
 
 > Task :app:compileDebugKotlin
 w: file:///app/app/src/main/java/com/mobile/datausage/MainActivity.kt:177:23 'checkOpNoThrow(String, Int, String): Int' is deprecated. Deprecated in Java
 w: file:///app/app/src/main/java/com/mobile/datausage/utils/DataUsageManager.kt:17:37 'TYPE_MOBILE: Int' is deprecated. Deprecated in Java
 
-> Task :app:compileDebugJavaWithJavac
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
 > Task :app:dexBuilderDebug
 > Task :app:mergeDebugGlobalSynthetics
 > Task :app:processDebugJavaRes
@@ -49,5 +50,5 @@ w: file:///app/app/src/main/java/com/mobile/datausage/utils/DataUsageManager.kt:
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
 
-BUILD SUCCESSFUL in 2m 1s
-36 actionable tasks: 36 executed
+BUILD SUCCESSFUL in 42s
+36 actionable tasks: 35 executed, 1 up-to-date
