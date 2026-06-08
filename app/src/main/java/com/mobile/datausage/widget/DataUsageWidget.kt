@@ -43,16 +43,20 @@ class DataUsageWidget : GlanceAppWidget() {
             val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
             val isLoading = prefs[LoadingKey] ?: false
 
-            val calendar = Calendar.getInstance()
-            val now = calendar.timeInMillis
-            calendar.set(Calendar.HOUR_OF_DAY, 0)
-            calendar.set(Calendar.MINUTE, 0)
-            calendar.set(Calendar.SECOND, 0)
-            calendar.set(Calendar.MILLISECOND, 0)
-            val todayMidnight = calendar.timeInMillis
+            val formattedUsage = if (!isLoading) {
+                val calendar = Calendar.getInstance()
+                val now = calendar.timeInMillis
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                val todayMidnight = calendar.timeInMillis
 
-            val usageBytes = DataUsageManager.getMobileDataUsage(context, todayMidnight, now)
-            val formattedUsage = DataUsageManager.formatDataUsage(usageBytes)
+                val usageBytes = DataUsageManager.getMobileDataUsage(context, todayMidnight, now)
+                DataUsageManager.formatDataUsage(usageBytes)
+            } else {
+                ""
+            }
 
             WidgetContent(formattedUsage, isLoading)
         }

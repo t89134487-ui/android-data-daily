@@ -46,6 +46,46 @@ object DataUsageManager {
         return history
     }
 
+    fun getTopAppsUsage(context: Context, startTime: Long, endTime: Long, limit: Int = 5): List<Pair<String, Long>> {
+        val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+        val appUsageList = mutableListOf<Pair<String, Long>>()
+        val packageManager = context.packageManager
+
+        try {
+            val stats = networkStatsManager.querySummary(
+                ConnectivityManager.TYPE_MOBILE,
+                null,
+                startTime,
+                endTime
+            )
+
+            val usageMap = mutableMapOf<Int, Long>()
+            val bucket = android.app.usage.NetworkStats.Bucket()
+            while (stats.hasNextBucket()) {
+                stats.getNextBucket(bucket)
+                val uid = bucket.uid
+                val bytes = bucket.rxBytes + bucket.txBytes
+                usageMap[uid] = (usageMap[uid] ?: 0L) + bytes
+            }
+            stats.close()
+
+            for ((uid, bytes) in usageMap) {
+                if (bytes > 0) {
+                    val packages = packageManager.getPackagesForUid(uid)
+                    val packageName = packages?.firstOrNull() ?: "Unknown (UID: $uid)"
+                    // Ignore system/common UIDs that aren't specific apps if necessary,
+                    // but for now we just take the first package name.
+                    appUsageList.add(packageName to bytes)
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e("DataUsageManager", "Error querying app network stats", e)
+        }
+
+        return appUsageList.sortedByDescending { it.second }.take(limit)
+    }
+
     fun formatDataUsage(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
         return if (mb >= 1024) {
