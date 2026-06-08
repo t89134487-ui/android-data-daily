@@ -71,11 +71,25 @@ object DataUsageManager {
 
             for ((uid, bytes) in usageMap) {
                 if (bytes > 0) {
-                    val packages = packageManager.getPackagesForUid(uid)
-                    val packageName = packages?.firstOrNull() ?: "Unknown (UID: $uid)"
-                    // Ignore system/common UIDs that aren't specific apps if necessary,
-                    // but for now we just take the first package name.
-                    appUsageList.add(packageName to bytes)
+                    val appName = when (uid) {
+                        android.app.usage.NetworkStats.Bucket.UID_REMOVED -> "Removed Apps"
+                        android.app.usage.NetworkStats.Bucket.UID_TETHERING -> "Tethering"
+                        else -> {
+                            val packages = packageManager.getPackagesForUid(uid)
+                            val packageName = packages?.firstOrNull()
+                            if (packageName != null) {
+                                try {
+                                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                                    packageManager.getApplicationLabel(appInfo).toString()
+                                } catch (e: Exception) {
+                                    packageName
+                                }
+                            } else {
+                                "System (UID: $uid)"
+                            }
+                        }
+                    }
+                    appUsageList.add(appName to bytes)
                 }
             }
 
