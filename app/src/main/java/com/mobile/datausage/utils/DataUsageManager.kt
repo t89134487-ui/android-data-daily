@@ -46,6 +46,60 @@ object DataUsageManager {
         return history
     }
 
+    fun getTopAppsUsage(context: Context, startTime: Long, endTime: Long, limit: Int = 5): List<Pair<String, Long>> {
+        val networkStatsManager = context.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
+        val appUsageList = mutableListOf<Pair<String, Long>>()
+        val packageManager = context.packageManager
+
+        try {
+            val stats = networkStatsManager.querySummary(
+                ConnectivityManager.TYPE_MOBILE,
+                null,
+                startTime,
+                endTime
+            )
+
+            val usageMap = mutableMapOf<Int, Long>()
+            val bucket = android.app.usage.NetworkStats.Bucket()
+            while (stats.hasNextBucket()) {
+                stats.getNextBucket(bucket)
+                val uid = bucket.uid
+                val bytes = bucket.rxBytes + bucket.txBytes
+                usageMap[uid] = (usageMap[uid] ?: 0L) + bytes
+            }
+            stats.close()
+
+            for ((uid, bytes) in usageMap) {
+                if (bytes > 0) {
+                    val appName = when (uid) {
+                        android.app.usage.NetworkStats.Bucket.UID_REMOVED -> "Removed Apps"
+                        android.app.usage.NetworkStats.Bucket.UID_TETHERING -> "Tethering"
+                        else -> {
+                            val packages = packageManager.getPackagesForUid(uid)
+                            val packageName = packages?.firstOrNull()
+                            if (packageName != null) {
+                                try {
+                                    val appInfo = packageManager.getApplicationInfo(packageName, 0)
+                                    packageManager.getApplicationLabel(appInfo).toString()
+                                } catch (e: Exception) {
+                                    packageName
+                                }
+                            } else {
+                                "System (UID: $uid)"
+                            }
+                        }
+                    }
+                    appUsageList.add(appName to bytes)
+                }
+            }
+
+        } catch (e: Exception) {
+            Log.e("DataUsageManager", "Error querying app network stats", e)
+        }
+
+        return appUsageList.sortedByDescending { it.second }.take(limit)
+    }
+
     fun formatDataUsage(bytes: Long): String {
         val mb = bytes / (1024.0 * 1024.0)
         return if (mb >= 1024) {
