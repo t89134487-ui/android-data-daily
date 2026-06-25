@@ -6,6 +6,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.action.ActionParameters
@@ -36,39 +38,47 @@ class DataUsageWidget : GlanceAppWidget() {
 
     companion object {
         val LoadingKey = booleanPreferencesKey("loading")
+        val UsageKey = stringPreferencesKey("usage")
+        val LastUpdatedKey = longPreferencesKey("last_updated")
+
+        suspend fun updateWidgetData(context: Context, glanceId: GlanceId) {
+            val calendar = Calendar.getInstance()
+            val now = calendar.timeInMillis
+            calendar.set(Calendar.HOUR_OF_DAY, 0)
+            calendar.set(Calendar.MINUTE, 0)
+            calendar.set(Calendar.SECOND, 0)
+            calendar.set(Calendar.MILLISECOND, 0)
+            val todayMidnight = calendar.timeInMillis
+
+            val usageBytes = DataUsageManager.getMobileDataUsage(context, todayMidnight, now)
+            val formattedUsage = DataUsageManager.formatDataUsage(usageBytes)
+
+            updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    this[UsageKey] = formattedUsage
+                    this[LastUpdatedKey] = now
+                }
+            }
+            DataUsageWidget().update(context, glanceId)
+        }
     }
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             val prefs = currentState<androidx.datastore.preferences.core.Preferences>()
             val isLoading = prefs[LoadingKey] ?: false
+            val usage = prefs[UsageKey] ?: "0.0 MB"
 
-            val formattedUsage = if (!isLoading) {
-                val calendar = Calendar.getInstance()
-                val now = calendar.timeInMillis
-                calendar.set(Calendar.HOUR_OF_DAY, 0)
-                calendar.set(Calendar.MINUTE, 0)
-                calendar.set(Calendar.SECOND, 0)
-                calendar.set(Calendar.MILLISECOND, 0)
-                val todayMidnight = calendar.timeInMillis
-
-                val usageBytes = DataUsageManager.getMobileDataUsage(context, todayMidnight, now)
-                DataUsageManager.formatDataUsage(usageBytes)
-            } else {
-                ""
-            }
-
-            WidgetContent(formattedUsage, isLoading)
+            WidgetContent(usage, isLoading)
         }
     }
 
     @Composable
     private fun WidgetContent(formattedUsage: String, isLoading: Boolean) {
-        val backgroundColor = if (isLoading) Color.LightGray else Color.White
         Column(
             modifier = GlanceModifier
                 .fillMaxSize()
-                .background(backgroundColor)
+                .background(Color.Transparent)
                 .padding(8.dp)
                 .clickable(actionRunCallback<RefreshAction>()),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -76,11 +86,15 @@ class DataUsageWidget : GlanceAppWidget() {
         ) {
             Text(
                 text = if (isLoading) "Refreshing..." else "Mobile Data",
-                style = TextStyle(fontSize = 12.sp)
+                style = TextStyle(
+                    color = androidx.glance.unit.ColorProvider(Color.White),
+                    fontSize = 12.sp
+                )
             )
             Text(
                 text = if (isLoading) "--" else formattedUsage,
                 style = TextStyle(
+                    color = androidx.glance.unit.ColorProvider(Color.White),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -95,7 +109,7 @@ class RefreshAction : ActionCallback {
         glanceId: GlanceId,
         parameters: ActionParameters
     ) {
-        // Set loading state
+        // Set loading state immediately
         updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
             prefs.toMutablePreferences().apply {
                 this[DataUsageWidget.LoadingKey] = true
@@ -103,8 +117,11 @@ class RefreshAction : ActionCallback {
         }
         DataUsageWidget().update(context, glanceId)
 
-        // Artificial delay for feedback
-        delay(150)
+        // Fetch data
+        DataUsageWidget.updateWidgetData(context, glanceId)
+
+        // Artificial delay for feedback if it was too fast
+        delay(100)
 
         // Clear loading state
         updateAppWidgetState(context, PreferencesGlanceStateDefinition, glanceId) { prefs ->
